@@ -31,13 +31,28 @@ Items.prototype.delete = function(id){
     }
 }
 
+Items.prototype.update = function(item) {
+    // find the index of the item we want to update
+    var success = false    
+    for (var i=0; i < this.items.length; i++) {
+        if (this.items[i].id === item.id) {
+            this.items[i].name = item.name
+            success = true
+            break
+        }
+    }
+    if (success === false) {
+        this.items.push(item)
+    }
+}
+
 var items = new Items();
 items.add('Broad beans');
 items.add('Tomatoes');
 items.add('Peppers');
 
-items.delete(0)
-items.delete(1)
+// items.delete(0)
+// items.delete(1)
 
 var fileServer = new static.Server('./public'); // TODO syntax
 
@@ -88,8 +103,32 @@ var server = http.createServer(function (req, res) {
         console.log("Doing the DELETE stuff")
         var id = parseInt(req.url.split('/')[2])
         console.log("Item ID: " + id)
-        console.log(id)
-        items.delete(id) // TODO why does this work via the backend but not via the frontend?
+        items.delete(id)
+    } else if (req.method === 'PUT') {
+        // PUT /items/3 {"name": "butter", "id": 3}
+        // -> sets the item with ID 3 to be butter
+        var id = parseInt(req.url.split('/')[2])
+        console.log("doing the PUT stuff")
+        console.log("Item ID: " + id)
+        // get data from client
+        var item = '';
+        req.on('data', function (chunk) {
+            item += chunk;
+        });
+        req.on('end', function () {
+            try {
+                item = JSON.parse(item);
+                items.update(item);
+                res.statusCode = 201; // TODO
+                res.end();
+            } catch(e) {
+                res.statusCode = 400;  // TODO
+                responseData = {'message': 'Invalid JSON'};  // TODO
+                res.end(JSON.stringify(responseData));  // TODO
+            }
+        });
+        // update the item with the given id or create a new one with it if such an item doesn't
+        // already exist
     } else {
         // TODO syntax
         fileServer.serve(req, res);
